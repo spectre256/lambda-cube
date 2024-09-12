@@ -36,13 +36,13 @@ parseLambda :: Parser Expr
 parseLambda = Lambda <$> (symbol "\\" *> parseIdent <* symbol ".") <*> parseExpr
 
 parseExprTerm :: Parser Expr
-parseExprTerm = choice
-    [ parseVar
-    , parseLambda
-    , parens parseExpr ]
+parseExprTerm = parseVar <|> parens parseExpr
 
 parseExpr :: Parser Expr
-parseExpr = try parseApply <|> parseExprTerm
+parseExpr = choice
+    [ try parseApply
+    , parseLambda
+    , parseExprTerm ]
 
 parse :: Text -> Maybe Expr
 parse = parseMaybe parseExpr

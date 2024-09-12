@@ -9,21 +9,24 @@ import Data.List (elemIndex)
 import Data.Maybe (fromMaybe)
 
 -- Gives De Brujin indices to each variable
-index :: Expr -> Indexed
-index = index' []
+index :: Expr -> State [Ident] Indexed
+index (Var var) = fromMaybe <$> freeVar <*> getVar
     where
-        -- Does not handle free variables
-        index' :: [Ident] -> Expr -> Indexed
-        index' vars (Var var) = Var . fromMaybe (-1 :: Int) $ elemIndex var vars
-        index' vars (Apply expr1 expr2) = Apply (index' vars expr1) (index' vars expr2)
-        index' vars (Lambda var expr) = Lambda var $ index' (var : vars) expr
+        getVar :: State [Ident] (Maybe Indexed)
+        getVar = gets $ fmap Var . elemIndex var
+        freeVar :: State [Ident] Indexed
+        freeVar = do
+            i <- gets length
+            modify (++ [var])
+            return $ Var i
+index (Apply expr1 expr2) = Apply <$> index expr1 <*> index expr2
+index (Lambda var expr) = Lambda var <$> (modify (var :) *> index expr <* modify tail)
 
-        -- Gives indices to free variables
-        fixup :: Indexed -> State Int Indexed
-        fixup = undefined
+index' :: Expr -> Indexed
+index' = flip evalState [] . index
 
--- Recover original variable names. TODO: Figure out how free variables are supposed to work here
-deindex :: Indexed -> Expr
+-- Recover original variable names
+deindex :: Indexed -> State [Ident] Expr
 deindex = undefined
 
 
@@ -39,3 +42,6 @@ eval (Apply (Lambda _ expr1) expr2) = eval $ subst 0 expr1 expr2
 eval (Apply expr1 expr2) = Apply (eval expr1) (eval expr2)
 eval (Lambda var expr) = Lambda var $ eval expr
 eval x = x
+
+interpret :: Expr -> Expr
+interpret = undefined
