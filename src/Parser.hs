@@ -33,7 +33,8 @@ parseApply :: Parser Expr
 parseApply = Apply <$> parseExprTerm <*> parseExprTerm
 
 parseLambda :: Parser Expr
-parseLambda = Lambda <$> (symbol "\\" *> parseIdent <* symbol ".") <*> parseExpr
+parseLambda = Lambda <$> (lambda *> parseIdent <* symbol ".") <*> parseExpr
+    where lambda = symbol "\\" <|> symbol "λ"
 
 parseExprTerm :: Parser Expr
 parseExprTerm = parseVar <|> parens parseExpr
