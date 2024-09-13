@@ -2,12 +2,21 @@ module Interpreter where
 
 import AST
 
-import Control.Monad.State
+import Data.HashMap.Strict
 import Data.List (elemIndex)
+import Control.Monad.State
+
+type Env = HashMap Ident Indexed
+type InterpretT = StateT Env
+
+type IndexST = StateT [Ident]
+
+runInterpretT :: Monad m => InterpretT m a -> m a
+runInterpretT = flip evalStateT empty
 
 
 -- Gives De Brujin indices to each variable
-index :: Expr -> State [Ident] Indexed
+index :: Monad m => Expr -> IndexST m Indexed
 index (Apply expr1 expr2) = Apply <$> index expr1 <*> index expr2
 index (Lambda var expr) = Lambda var <$> (modify (var :) *> index expr <* modify tail)
 index (Var var) = do
@@ -20,7 +29,7 @@ index (Var var) = do
             return $ Var i
 
 -- Recovers original variable names
-deindex :: Indexed -> State [Ident] Expr
+deindex :: Monad m => Indexed -> IndexST m Expr
 deindex (Var i) = gets $ Var . (!! i)
 deindex (Apply expr1 expr2) = Apply <$> deindex expr1 <*> deindex expr2
 deindex (Lambda var expr) = Lambda var <$> (modify (var :) *> deindex expr <* modify tail)
@@ -38,12 +47,15 @@ subst i (Apply expr1 expr2) expr = Apply (subst i expr1 expr) (subst i expr2 exp
 subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (incVar expr2)
 
 -- Evaluates an indexed expression
-eval :: Indexed -> Indexed
+eval :: Monad m => Indexed -> InterpretT m Indexed
 eval (Apply (Lambda _ expr1) expr2) = eval $ subst 0 expr1 expr2
-eval (Apply expr1 expr2) = Apply (eval expr1) (eval expr2)
-eval (Lambda var expr) = Lambda var $ eval expr
-eval x = x
+eval (Apply expr1 expr2) = Apply <$> eval expr1 <*> eval expr2
+eval (Lambda var expr) = Lambda var <$> eval expr
+eval x = return x
 
 -- Evaluates a normal expression
-interpret :: Expr -> Expr
-interpret = flip evalState [] . (deindex . eval <=< index)
+interpret :: Monad m => Expr -> InterpretT m Expr
+interpret = flip evalStateT [] . action
+    where
+        action :: Monad m => Expr -> IndexST (InterpretT m) Expr
+        action = deindex <=< lift . eval <=< index

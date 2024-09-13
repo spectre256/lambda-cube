@@ -5,15 +5,25 @@ import Interpreter
 
 import Data.Text (pack)
 import System.Console.Haskeline
+import Control.Monad.Trans
+
+type App = InterpretT (InputT IO)
+
+runApp :: App () -> IO ()
+runApp = runInputT defaultSettings . runInterpretT
 
 main :: IO ()
-main = runInputT defaultSettings loop
+main = runApp loop
     where
+        loop :: App ()
         loop = do
-            minput <- getInputLine "λ> "
+            minput <- lift $ getInputLine "λ> "
             case minput of
                 Nothing -> loop
-                Just line -> accept (pack line) >> loop
-        accept line = case parse line of
-            Nothing -> outputStrLn "Bad syntax, idiot"
-            Just ast -> outputStrLn . show $ interpret ast
+                Just "" -> loop
+                Just line -> accept line
+                    >>= lift . outputStrLn  >> loop
+        accept :: Monad m => String -> InterpretT m String
+        accept line = case parse (pack line) of
+            Nothing -> return "Bad syntax, idiot"
+            Just ast -> show <$> interpret ast
