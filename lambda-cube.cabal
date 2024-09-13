@@ -22,14 +22,14 @@ executable lambda-cube
         AST,
         Parser,
         Interpreter
-    -- other-extensions:
     build-depends:
         base ^>=4.17.2.1,
         text,
         unordered-containers,
         megaparsec,
         transformers,
-        mtl
+        mtl,
+        haskeline
 
     hs-source-dirs: src
     default-language: GHC2021
