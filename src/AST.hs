@@ -13,6 +13,11 @@ data Expr' a b
     | Lambda b (Expr' a b)
     deriving (Eq)
 
+data Stmt
+    = DeclVar Ident Expr
+    | EvalExpr Expr
+    deriving (Show, Eq)
+
 
 showParens :: Show a => a -> String
 showParens x = '(' : show x ++ ")"

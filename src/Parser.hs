@@ -45,5 +45,13 @@ parseExpr = choice
     , parseLambda
     , parseExprTerm ]
 
+parseDecl :: Parser Stmt
+parseDecl = DeclVar <$> parseIdent <* symbol "=" <*> parseExpr
+
+parseStmt :: Parser Stmt
+parseStmt = hspace *> choice
+    [ try parseDecl
+    , EvalExpr <$> parseExpr ]
+
 parse :: Text -> Maybe Expr
 parse = parseMaybe parseExpr
