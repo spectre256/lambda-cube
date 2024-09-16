@@ -23,6 +23,7 @@ main = runApp loop
                 Just "" -> loop
                 Just line -> accept line
                     >>= lift . outputStrLn  >> loop
+
         accept :: Monad m => String -> InterpretT m String
         accept line = case parse (pack line) of
             Nothing -> return "Bad syntax, idiot"
