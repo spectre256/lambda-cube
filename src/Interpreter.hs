@@ -48,12 +48,7 @@ mapVar f (Var i) = Var $ f i
 mapVar f (Apply expr1 expr2) = Apply (mapVar f expr1) (mapVar f expr2)
 mapVar f (Lambda var expr) = Lambda var $ mapVar f expr
 
--- subst :: Int -> Indexed -> Indexed -> Indexed
--- subst i expr1@(Var var) expr2 = if i == var then expr2 else expr1
--- subst i (Apply expr1 expr2) expr = Apply (subst i expr1 expr) (subst i expr2 expr)
--- subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (mapVar (+ 1) expr2)
-
--- Replaces variables with an expression
+-- Replaces variable i with an expression and updates variable indices accordingly
 subst :: Int -> Indexed -> Indexed -> Indexed
 subst i (Var i') expr
     | i' == i = expr
@@ -62,21 +57,10 @@ subst i (Var i') expr
 subst i (Apply expr1 expr2) expr = Apply (subst i expr1 expr) (subst i expr2 expr)
 subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (mapVar (+ 1) expr2)
 
--- apply:
--- for every var: if equal to target i, replace; if greater than target i, decrement, else keep original
--- for every lambda: increment target i, increment all vars in replacement
--- otherwise apply constructor
-
+-- Applies a lambda abstraction
 apply :: Indexed -> Indexed -> Indexed
 apply (Lambda _ expr1) expr2 = subst 0 expr1 expr2
 apply x y = Apply x y
-
--- (\x. \y. x y) w -> \y. w y
--- (\. \. 1 0) 0 -> \. 1 0
--- (\x. w x) w -> w w
--- (\. 1 0) 0 -> 0 0
--- (\x. w x) z -> w z
--- (\. 1 0) 1 -> 0 1
 
 -- Evaluates an indexed expression
 eval :: Monad m => Indexed -> InterpretT m Indexed
@@ -87,12 +71,8 @@ eval x = return x
 -- Evaluates a normal expression
 interpret :: Monad m => Expr -> InterpretT m Expr
 interpret = flip evalStateT [] . action
-    where
-        action :: Monad m => Expr -> IndexST (InterpretT m) Expr
-        action = deindex <=< lift . eval <=< index
+    where action = deindex <=< lift . eval <=< index
 
 interpret' :: Monad m => Expr -> InterpretT m Indexed
 interpret' = flip evalStateT [] . action
-    where
-        action :: Monad m => Expr -> IndexST (InterpretT m) Indexed
-        action = lift . eval <=< index
+    where action = lift . eval <=< index
