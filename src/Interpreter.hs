@@ -21,8 +21,11 @@ runInterpretT = flip evalStateT H.empty
 runInterpret :: Interpret a -> a
 runInterpret = runIdentity . runInterpretT
 
+runIndexST :: Monad m => IndexST m a -> m a
+runIndexST = flip evalStateT []
+
 runIndex :: Index a -> a
-runIndex = runIdentity . flip evalStateT []
+runIndex = runIdentity . runIndexST
 
 -- Gives De Brujin indices to each variable
 index :: Monad m => Expr -> IndexST m Indexed
@@ -63,29 +66,31 @@ subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (mapVar (+ 1
 subst _ x _ = x
 
 -- Applies a lambda abstraction
-apply :: Indexed -> Indexed -> Indexed
-apply (Lambda _ expr1) expr2 = subst 0 expr1 expr2
-apply x y = Apply x y
+apply :: Monad m => Indexed -> Indexed -> InterpretT m Indexed
+apply (Lambda _ expr1) expr2 = eval $ subst 0 expr1 expr2
+apply x y = return $ Apply x y
 
 -- Evaluates an indexed expression
 eval :: Monad m => Indexed -> InterpretT m Indexed
-eval (Apply expr1 expr2) = apply <$> eval expr1 <*> eval expr2
+eval (Apply expr1 expr2) = do
+    res1 <- eval expr1
+    res2 <- eval expr2
+    apply res1 res2
 eval (Lambda var expr) = Lambda var <$> eval expr
 eval (Ref ref) = eval =<< gets (H.! ref) -- TODO: Error handling
 eval x = return x
 
 -- Evaluates a normal expression
 interpret :: Monad m => Expr -> InterpretT m Expr
-interpret = flip evalStateT [] . action
-    where action = deindex <=< lift . eval <=< index
+interpret = runIndexST . (deindex <=< lift . eval <=< index)
 
+interpret' :: Monad m => Expr -> InterpretT m Indexed
+interpret' = runIndexST . (lift . eval <=< index)
+
+-- Executes a statement (a binding or an expression to evaluate)
 exec :: Monad m => Stmt -> InterpretT m Expr
 exec (DeclVar var expr) = do
     let indexed = runIndex $ index expr
     modify (H.insert var indexed)
     return expr
 exec (EvalExpr expr) = interpret expr
-
-interpret' :: Monad m => Expr -> InterpretT m Indexed
-interpret' = flip evalStateT [] . action
-    where action = lift . eval <=< index
