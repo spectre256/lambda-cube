@@ -27,4 +27,4 @@ main = runApp loop
         accept :: Monad m => String -> InterpretT m String
         accept line = case parse (pack line) of
             Nothing -> return "Bad syntax, idiot"
-            Just ast -> show <$> interpret ast
+            Just ast -> show <$> exec ast

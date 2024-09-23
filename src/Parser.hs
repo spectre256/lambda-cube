@@ -53,5 +53,5 @@ parseStmt = hspace *> choice
     [ try parseDecl
     , EvalExpr <$> parseExpr ]
 
-parse :: Text -> Maybe Expr
-parse = parseMaybe parseExpr
+parse :: Text -> Maybe Stmt
+parse = parseMaybe parseStmt
