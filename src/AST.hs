@@ -12,29 +12,33 @@ data Expr' a b
     | Ref Ident
     | Apply (Expr' a b) (Expr' a b)
     | Lambda b (Expr' a b)
-    deriving (Eq)
+    deriving (Show, Eq)
 
 data Stmt
     = DeclVar Ident Expr
     | EvalExpr Expr
+    | Cmd Ident Expr
     deriving (Show, Eq)
 
 
-showParens :: Show a => a -> String
-showParens x = '(' : show x ++ ")"
+class Pretty a where
+    pretty :: a -> String
 
-showTerm :: Show (Expr' a b) => Expr' a b -> String
-showTerm e@(Var _) = show e
-showTerm e = showParens e
+prettyParens :: Pretty a => a -> String
+prettyParens x = '(' : pretty x ++ ")"
 
-instance Show Expr where
-    show (Var var) = unpack var
-    show (Ref ref) = unpack ref
-    show (Apply expr1 expr2) = showTerm expr1 ++ " " ++ showTerm expr2
-    show (Lambda var expr) = "λ" ++ unpack var ++ ". " ++ show expr
+prettyTerm :: Pretty (Expr' a b) => Expr' a b -> String
+prettyTerm e@(Var _) = pretty e
+prettyTerm e = prettyParens e
 
-instance Show Indexed where
-    show (Var i) = show i
-    show (Ref ref) = unpack ref
-    show (Apply expr1 expr2) = showTerm expr1 ++ " " ++ showTerm expr2
-    show (Lambda _ expr) = "λ. " ++ show expr
+instance Pretty Expr where
+    pretty (Var var) = unpack var
+    pretty (Ref ref) = unpack ref
+    pretty (Apply expr1 expr2) = pretty expr1 ++ " " ++ prettyTerm expr2
+    pretty (Lambda var expr) = "λ" ++ unpack var ++ ". " ++ pretty expr
+
+instance Pretty Indexed where
+    pretty (Var i) = show i
+    pretty (Ref ref) = unpack ref
+    pretty (Apply expr1 expr2) = prettyTerm expr1 ++ " " ++ prettyTerm expr2
+    pretty (Lambda _ expr) = "λ. " ++ pretty expr

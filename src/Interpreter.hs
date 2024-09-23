@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Interpreter where
 
 import AST
@@ -88,9 +90,16 @@ interpret' :: Monad m => Expr -> InterpretT m Indexed
 interpret' = runIndexST . (lift . eval <=< index)
 
 -- Executes a statement (a binding or an expression to evaluate)
-exec :: Monad m => Stmt -> InterpretT m Expr
+exec :: Monad m => Stmt -> InterpretT m String
 exec (DeclVar var expr) = do
     let indexed = runIndex $ index expr
     modify (H.insert var indexed)
-    return expr
-exec (EvalExpr expr) = interpret expr
+    return $ pretty expr
+exec (EvalExpr expr) = pretty <$> interpret expr
+exec (Cmd ident expr) = case ident of
+    "parse" -> return $ show expr
+    "index" -> return . pretty . runIndex $ index expr
+    "index'" -> return . show . runIndex $ index expr
+    "expand" -> undefined
+    _ -> return "Invalid command"
+
