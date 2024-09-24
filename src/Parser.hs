@@ -34,8 +34,11 @@ parseApply :: Parser Expr
 parseApply = foldl' Apply <$> parseExprTerm <*> some parseExprTerm
 
 parseLambda :: Parser Expr
-parseLambda = Lambda <$> (lambda *> parseIdent <* symbol ".") <*> parseExpr
-    where lambda = symbol "\\" <|> symbol "λ"
+parseLambda = do
+    vars <- let lambda = symbol "\\" <|> symbol "λ"
+        in lambda *> some parseIdent <* symbol "."
+    expr <- parseExpr
+    return $ foldr Lambda expr vars
 
 parseExprTerm :: Parser Expr
 parseExprTerm = parseVar <|> parens parseExpr
