@@ -57,6 +57,12 @@ mapVar f (Apply expr1 expr2) = Apply (mapVar f expr1) (mapVar f expr2)
 mapVar f (Lambda var expr) = Lambda var $ mapVar f expr
 mapVar _ x = x
 
+expand :: Monad m => Indexed -> InterpretT m Indexed
+expand (Ref ref) = gets (H.! ref)
+expand (Lambda var expr) = Lambda var <$> expand expr
+expand (Apply expr1 expr2) = Apply <$> expand expr1 <*> expand expr2
+expand x = return x
+
 -- Replaces variable i with an expression and updates variable indices accordingly
 subst :: Int -> Indexed -> Indexed -> Indexed
 subst i (Var i') expr
@@ -100,6 +106,7 @@ exec (Cmd ident expr) = case ident of
     "parse" -> return $ show expr
     "index" -> return . pretty . runIndex $ index expr
     "index'" -> return . show . runIndex $ index expr
-    "expand" -> undefined
+    "expand" -> pretty <$> runExpand expr
+        where runExpand = runIndexST . (deindex <=< lift . expand <=< index)
     _ -> return "Invalid command"
 
