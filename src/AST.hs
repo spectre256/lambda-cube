@@ -31,10 +31,15 @@ prettyTerm :: Pretty (Expr' a b) => Expr' a b -> String
 prettyTerm e@(Var _) = pretty e
 prettyTerm e = prettyParens e
 
+prettyApplyTerm :: Pretty (Expr' a b) => Expr' a b -> String
+prettyApplyTerm e@(Var _) = pretty e
+prettyApplyTerm e@(Apply _ _) = pretty e
+prettyApplyTerm e = prettyParens e
+
 instance Pretty Expr where
     pretty (Var var) = unpack var
     pretty (Ref ref) = unpack ref
-    pretty (Apply expr1 expr2) = pretty expr1 ++ " " ++ prettyTerm expr2
+    pretty (Apply expr1 expr2) = prettyApplyTerm expr1 ++ " " ++ prettyTerm expr2
     pretty (Lambda var expr) = "λ" ++ unpack var ++ ". " ++ pretty expr
 
 instance Pretty Indexed where
