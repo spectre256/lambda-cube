@@ -4,14 +4,29 @@ import Parser
 import Interpreter
 
 import Data.Text (pack)
-import System.Console.Haskeline
 import Control.Monad.Trans
 import Data.Char (isSpace)
+import System.Console.Haskeline
+import System.Directory
+import System.FilePath ((</>))
 
 type App = InterpretT (InputT IO)
 
+historyPath :: IO FilePath
+historyPath = do
+    configDir <- getXdgDirectory XdgConfig "lambda"
+    createDirectoryIfMissing True configDir
+    return (configDir </> "history")
+
 runApp :: App () -> IO ()
-runApp = runInputT defaultSettings . runInterpretT
+runApp app = do
+    path <- historyPath
+    runInputT (settings path) $ runInterpretT app
+    where
+        settings path = Settings
+            { complete = noCompletion
+            , historyFile = Just path
+            , autoAddHistory = True }
 
 main :: IO ()
 main = runApp loop

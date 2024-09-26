@@ -29,7 +29,9 @@ executable lambda-cube
         megaparsec,
         transformers,
         mtl,
-        haskeline
+        haskeline,
+        directory,
+        filepath
 
     hs-source-dirs: src
     default-language: GHC2021
