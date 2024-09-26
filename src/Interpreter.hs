@@ -34,11 +34,7 @@ index :: Monad m => Expr -> IndexST m Indexed
 index (Apply expr1 expr2) = Apply <$> index expr1 <*> index expr2
 index (Lambda var expr) = Lambda var <$> withVar var (index expr)
 index (Ref ref) = return $ Ref ref
-index (Var var) = do
-    maybeVar <- gets $ elemIndex var
-    return $ case maybeVar of
-        Just v -> Var v
-        Nothing -> Ref var
+index (Var var) = gets $ maybe (Ref var) Var . elemIndex var
 
 -- Recovers original variable names
 deindex :: Monad m => Indexed -> IndexST m Expr
@@ -78,6 +74,11 @@ apply :: Monad m => Indexed -> Indexed -> InterpretT m Indexed
 apply (Lambda _ expr1) expr2 = eval $ subst 0 expr1 expr2
 apply x y = return $ Apply x y
 
+-- Helper for the apply command
+apply1 :: Indexed -> Indexed
+apply1 (Apply (Lambda _ expr1) expr2) = subst 0 expr1 expr2
+apply1 x = x
+
 -- Evaluates an indexed expression
 eval :: Monad m => Indexed -> InterpretT m Indexed
 eval (Apply expr1 expr2) = do
@@ -108,5 +109,7 @@ exec (Cmd ident expr) = case ident of
     "index'" -> return . show . runIndex $ index expr
     "expand" -> pretty <$> runExpand expr
         where runExpand = runIndexST . (deindex <=< lift . expand <=< index)
+    "apply" -> pretty <$> runApply expr
+        where runApply = runIndexST . (deindex . apply1 <=< lift . expand <=< index)
     _ -> return "Invalid command"
 
