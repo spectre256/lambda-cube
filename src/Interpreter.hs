@@ -47,11 +47,10 @@ withVar :: Monad m => Ident -> IndexST m a -> IndexST m a
 withVar var action = modify (var :) *> action <* modify tail
 
 -- Helper to increment variable indices
-mapVar :: (Int -> Int) -> Indexed -> Indexed
-mapVar f (Var i) = Var $ f i
-mapVar f (Apply expr1 expr2) = Apply (mapVar f expr1) (mapVar f expr2)
-mapVar f (Lambda var expr) = Lambda var $ mapVar f expr
-mapVar _ x = x
+incVar :: Indexed -> Indexed
+incVar (Var i) = Var $ i + 1
+incVar (Apply expr1 expr2) = Apply (incVar expr1) (incVar expr2)
+incVar x = x
 
 expand :: Monad m => Indexed -> InterpretT m Indexed
 expand (Ref ref) = gets (H.! ref)
@@ -66,7 +65,7 @@ subst i (Var i') expr
     | i' > i = Var $ i' - 1
     | otherwise = Var i'
 subst i (Apply expr1 expr2) expr = Apply (subst i expr1 expr) (subst i expr2 expr)
-subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (mapVar (+ 1) expr2)
+subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (incVar expr2)
 subst _ x _ = x
 
 -- Applies a lambda abstraction
