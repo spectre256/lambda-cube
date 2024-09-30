@@ -1,14 +1,23 @@
 module AST where
 
 import Data.Text (Text, unpack)
+import Data.Scientific (Scientific)
 
 type Ident = Text
 
 type Expr = Expr' Ident Ident
 type Indexed = Expr' Int Ident
 
+data Literal
+    = NumLit Scientific
+    | BoolLit Bool
+    | CharLit Char
+    | StrLit Text
+    deriving (Show, Eq)
+
 data Expr' a b
-    = Var a
+    = Lit Literal
+    | Var a
     | Ref Ident
     | Apply (Expr' a b) (Expr' a b)
     | Lambda b (Expr' a b)
@@ -18,6 +27,14 @@ data Stmt
     = DeclVar Ident Expr
     | EvalExpr Expr
     | Cmd Ident Expr
+    deriving (Show, Eq)
+
+data Ty
+    = NumTy
+    | BoolTy
+    | CharTy
+    | StrTy
+    | FnTy Ty Ty
     deriving (Show, Eq)
 
 
@@ -47,3 +64,15 @@ instance Pretty Indexed where
     pretty (Ref ref) = unpack ref
     pretty (Apply expr1 expr2) = prettyTerm expr1 ++ " " ++ prettyTerm expr2
     pretty (Lambda _ expr) = "λ. " ++ pretty expr
+
+
+prettyTyTerm :: Ty -> String
+prettyTyTerm ty@(FnTy _ _) = prettyParens ty
+prettyTyTerm ty = pretty ty
+
+instance Pretty Ty where
+    pretty NumTy = "Num"
+    pretty BoolTy = "Bool"
+    pretty CharTy = "Char"
+    pretty StrTy = "Str"
+    pretty (FnTy ty1 ty2) = prettyTyTerm ty1 ++ " -> " ++ pretty ty2

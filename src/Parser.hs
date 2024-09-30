@@ -27,6 +27,18 @@ parens = between (symbol "(") (symbol ")")
 parseIdent :: Parser Text
 parseIdent = lexeme $ T.cons <$> letterChar <*> takeWhileP Nothing isAlphaNum
 
+parseLit :: Parser Literal
+parseLit = choice
+    [ NumLit <$> parseNum
+    , BoolLit <$> parseBool
+    , CharLit <$> parseChar
+    , StrLit . T.pack <$> parseString ]
+    where
+        parseNum = lexeme $ L.signed (pure ()) L.scientific
+        parseBool = True <$ symbol "true" <|> False <$ symbol "false"
+        parseChar = char '\'' *> L.charLiteral <* symbol "'"
+        parseString = char '"' *> manyTill L.charLiteral (char '"')
+
 parseVar :: Parser Expr
 parseVar = Var <$> parseIdent
 

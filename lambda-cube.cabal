@@ -26,6 +26,7 @@ executable lambda-cube
         base ^>=4.17.2.1,
         text,
         unordered-containers,
+        scientific,
         megaparsec,
         transformers,
         mtl,
