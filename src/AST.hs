@@ -20,7 +20,7 @@ data Expr' a b
     | Var a
     | Ref Ident
     | Apply (Expr' a b) (Expr' a b)
-    | Lambda b (Expr' a b)
+    | Lambda b Ty (Expr' a b)
     deriving (Show, Eq)
 
 data Stmt
@@ -41,6 +41,13 @@ data Ty
 class Pretty a where
     pretty :: a -> String
 
+
+instance Pretty Literal where
+    pretty (NumLit n) = show n
+    pretty (BoolLit b) = if b then "true" else "false"
+    pretty (CharLit c) = show c
+    pretty (StrLit s) = unpack s
+
 prettyParens :: Pretty a => a -> String
 prettyParens x = '(' : pretty x ++ ")"
 
@@ -54,16 +61,18 @@ prettyApplyTerm e@(Apply _ _) = pretty e
 prettyApplyTerm e = prettyParens e
 
 instance Pretty Expr where
+    pretty (Lit lit) = pretty lit
     pretty (Var var) = unpack var
     pretty (Ref ref) = unpack ref
     pretty (Apply expr1 expr2) = prettyApplyTerm expr1 ++ " " ++ prettyTerm expr2
-    pretty (Lambda var expr) = "λ" ++ unpack var ++ ". " ++ pretty expr
+    pretty (Lambda var ty expr) = "λ" ++ unpack var ++ " : " ++ pretty ty ++ ". " ++ pretty expr
 
 instance Pretty Indexed where
+    pretty (Lit lit) = pretty lit
     pretty (Var i) = show i
     pretty (Ref ref) = unpack ref
     pretty (Apply expr1 expr2) = prettyTerm expr1 ++ " " ++ prettyTerm expr2
-    pretty (Lambda _ expr) = "λ. " ++ pretty expr
+    pretty (Lambda _ _ expr) = "λ. " ++ pretty expr
 
 
 prettyTyTerm :: Ty -> String

@@ -32,7 +32,7 @@ runIndex = runIdentity . runIndexST
 -- Gives De Brujin indices to each variable
 index :: Monad m => Expr -> IndexST m Indexed
 index (Apply expr1 expr2) = Apply <$> index expr1 <*> index expr2
-index (Lambda var expr) = Lambda var <$> withVar var (index expr)
+index (Lambda var ty expr) = Lambda var ty <$> withVar var (index expr)
 index (Ref ref) = return $ Ref ref
 index (Var var) = gets $ maybe (Ref var) Var . elemIndex var
 
@@ -41,7 +41,7 @@ deindex :: Monad m => Indexed -> IndexST m Expr
 deindex (Var i) = gets $ Var . (!! i)
 deindex (Ref ref) = return $ Ref ref -- Yes, it has to be rewrapped in a Ref to avoid a type error
 deindex (Apply expr1 expr2) = Apply <$> deindex expr1 <*> deindex expr2
-deindex (Lambda var expr) = Lambda var <$> withVar var (deindex expr)
+deindex (Lambda var ty expr) = Lambda var ty <$> withVar var (deindex expr)
 
 withVar :: Monad m => Ident -> IndexST m a -> IndexST m a
 withVar var action = modify (var :) *> action <* modify tail
@@ -54,7 +54,7 @@ incVar x = x
 
 expand :: Monad m => Indexed -> InterpretT m Indexed
 expand (Ref ref) = gets (H.! ref)
-expand (Lambda var expr) = Lambda var <$> expand expr
+expand (Lambda var ty expr) = Lambda var ty <$> expand expr
 expand (Apply expr1 expr2) = Apply <$> expand expr1 <*> expand expr2
 expand x = return x
 
@@ -65,17 +65,17 @@ subst i (Var i') expr
     | i' > i = Var $ i' - 1
     | otherwise = Var i'
 subst i (Apply expr1 expr2) expr = Apply (subst i expr1 expr) (subst i expr2 expr)
-subst i (Lambda var expr1) expr2 = Lambda var $ subst (i + 1) expr1 (incVar expr2)
+subst i (Lambda var ty expr1) expr2 = Lambda var ty $ subst (i + 1) expr1 (incVar expr2)
 subst _ x _ = x
 
 -- Applies a lambda abstraction
 apply :: Monad m => Indexed -> Indexed -> InterpretT m Indexed
-apply (Lambda _ expr1) expr2 = eval $ subst 0 expr1 expr2
+apply (Lambda _ _ expr1) expr2 = eval $ subst 0 expr1 expr2
 apply x y = return $ Apply x y
 
 -- Helper for the apply command
 apply1 :: Indexed -> Indexed
-apply1 (Apply (Lambda _ expr1) expr2) = subst 0 expr1 expr2
+apply1 (Apply (Lambda _ _ expr1) expr2) = subst 0 expr1 expr2
 apply1 x = x
 
 -- Evaluates an indexed expression
@@ -84,7 +84,7 @@ eval (Apply expr1 expr2) = do
     res1 <- eval expr1
     res2 <- eval expr2
     apply res1 res2
-eval (Lambda var expr) = Lambda var <$> eval expr
+eval (Lambda var ty expr) = Lambda var ty <$> eval expr
 eval (Ref ref) = eval =<< gets (H.! ref) -- TODO: Error handling
 eval x = return x
 
